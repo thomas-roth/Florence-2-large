@@ -2588,6 +2588,9 @@ class Florence2ForConditionalGeneration(Florence2PreTrainedModel):
     def get_input_embeddings(self):
         return self.language_model.get_input_embeddings()
 
+    def get_output_embeddings(self):
+        return self.language_model.get_output_embeddings()
+
     def resize_token_embeddings(self, new_num_tokens: Optional[int] = None, pad_to_multiple_of=None) -> nn.Embedding:
         model_embeds = self.language_model.resize_token_embeddings(new_num_tokens, pad_to_multiple_of)
         # update vocab size
