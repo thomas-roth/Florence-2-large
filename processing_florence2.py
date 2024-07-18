@@ -596,7 +596,7 @@ class Florence2PostProcesser(object):
                 {
                     'TASK_NAME': 'ocr',
                     'PATTERN':  r'(.+?)<loc_(\d+)><loc_(\d+)><loc_(\d+)><loc_(\d+)><loc_(\d+)><loc_(\d+)><loc_(\d+)><loc_(\d+)>',
-                    'AREA_THRESHOLD': 0.01
+                    'AREA_THRESHOLD': 0.00
                 },
                 {
                     'TASK_NAME': 'phrase_grounding',
@@ -1025,7 +1025,7 @@ class Florence2PostProcesser(object):
                     text,
                     pattern=pattern,
                     image_size=image_size,
-                    area_threshold=self.parse_tasks_configs[task].get('AREA_THRESHOLD', 0.01),
+                    area_threshold=self.parse_tasks_configs[task].get('AREA_THRESHOLD', 0.0),
                 )
                 parsed_dict['ocr'] = instances
             elif task == 'phrase_grounding':
