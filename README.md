@@ -27,7 +27,7 @@ Resources and Technical Documentation:
  
 ## How to Get Started with the Model
 
-Use the code below to get started with the model.
+Use the code below to get started with the model. All models are trained with float16. 
 
 ```python
 import requests
