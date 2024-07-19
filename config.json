@@ -79,7 +79,7 @@
     "image_feature_source": ["spatial_avg_pool", "temporal_avg_pool"]
   },
   "vocab_size": 51289,
-  "torch_dtype": "float32",
+  "torch_dtype": "float16",
   "transformers_version": "4.41.0.dev0",
   "is_encoder_decoder": true
 }
