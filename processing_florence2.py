@@ -496,7 +496,7 @@ class CoordinatesQuantizer(object):
 
 
 class Florence2PostProcesser(object):
-    """
+    r"""
     Florence-2 post process for converting text prediction to various tasks results. 
 
     Args:
