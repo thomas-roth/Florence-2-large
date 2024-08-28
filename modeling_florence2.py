@@ -2643,7 +2643,7 @@ class Florence2ForConditionalGeneration(Florence2PreTrainedModel):
         return x 
 
     def _merge_input_ids_with_image_features(
-        self, image_features, inputs_embeds 
+        self, image_features, inputs_embeds, task_prefix_attention_mask=None
     ):
         batch_size, image_token_length = image_features.size()[:-1]
         device = image_features.device
@@ -2655,10 +2655,12 @@ class Florence2ForConditionalGeneration(Florence2PreTrainedModel):
             return image_features, image_attention_mask
 
         task_prefix_embeds = inputs_embeds
-        task_prefix_attention_mask = torch.ones(batch_size, task_prefix_embeds.size(1), device=device)
 
-        if len(task_prefix_attention_mask.shape) == 3:
-            task_prefix_attention_mask = task_prefix_attention_mask[:, 0]
+        if task_prefix_attention_mask is None:
+            task_prefix_attention_mask = torch.ones(batch_size, task_prefix_embeds.size(1), device=device)
+
+            if len(task_prefix_attention_mask.shape) == 3:
+                task_prefix_attention_mask = task_prefix_attention_mask[:, 0]
 
         # concat [image embeds, task prefix embeds]
         inputs_embeds = torch.cat([image_features, task_prefix_embeds], dim=1)
@@ -2734,7 +2736,7 @@ class Florence2ForConditionalGeneration(Florence2PreTrainedModel):
             if pixel_values is not None:
                 # (batch_size, num_image_tokens, hidden_size)
                 image_features = self._encode_image(pixel_values)
-                inputs_embeds, attention_mask = self._merge_input_ids_with_image_features(image_features, inputs_embeds)
+                inputs_embeds, attention_mask = self._merge_input_ids_with_image_features(image_features, inputs_embeds, task_prefix_attention_mask=attention_mask)
 
         if inputs_embeds is not None:
             attention_mask = attention_mask.to(inputs_embeds.dtype)
@@ -2781,6 +2783,7 @@ class Florence2ForConditionalGeneration(Florence2PreTrainedModel):
         input_ids, 
         inputs_embeds=None,
         pixel_values=None,
+        attention_mask=None,
         **kwargs
         ):
 
@@ -2791,11 +2794,12 @@ class Florence2ForConditionalGeneration(Florence2PreTrainedModel):
             # 2. Merge text and images
             if pixel_values is not None:
                 image_features = self._encode_image(pixel_values)
-                inputs_embeds, attention_mask = self._merge_input_ids_with_image_features(image_features, inputs_embeds)
+                inputs_embeds, attention_mask = self._merge_input_ids_with_image_features(image_features, inputs_embeds, task_prefix_attention_mask=attention_mask)
         
         return self.language_model.generate(
             input_ids=None,
             inputs_embeds=inputs_embeds,
+            attention_mask=attention_mask,
             **kwargs
         )
 
