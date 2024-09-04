@@ -327,7 +327,7 @@ class Florence2Config(PretrainedConfig):
         self.vocab_size = vocab_size
         self.projection_dim = projection_dim
         if vision_config is not None:
-            vision_config = PretrainedConfig(**vision_config)
+            vision_config = Florence2VisionConfig(**vision_config)
         self.vision_config = vision_config
         self.vocab_size = self.vocab_size
 
