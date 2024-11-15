@@ -10,6 +10,8 @@ tags:
 
 ## Model Summary
 
+**This is a continued pretrained version of Florence-2-large model with 4k context length, only 0.1B samples are used for continue pretraining, thus it might not be trained well. In addition, OCR task has been updated with line separator ('\n'). COCO OD AP 39.8**
+
 This Hub repository contains a HuggingFace's `transformers` implementation of Florence-2 model from Microsoft.
 
 Florence-2 is an advanced vision foundation model that uses a prompt-based approach to handle a wide range of vision and vision-language tasks.  Florence-2 can interpret simple text prompts to perform tasks like captioning, object detection, and segmentation. It leverages our FLD-5B dataset, containing 5.4 billion annotations across 126 million images, to master multi-task learning. The model's sequence-to-sequence architecture enables it to excel in both zero-shot and fine-tuned settings, proving to be a competitive vision foundation model. 
@@ -53,7 +55,7 @@ inputs = processor(text=prompt, images=image, return_tensors="pt").to(device, to
 generated_ids = model.generate(
     input_ids=inputs["input_ids"],
     pixel_values=inputs["pixel_values"],
-    max_new_tokens=1024,
+    max_new_tokens=4096,
     num_beams=3,
     do_sample=False
 )
