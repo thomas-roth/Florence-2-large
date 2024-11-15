@@ -190,6 +190,44 @@ prompt = "<OCR_WITH_REGION>"
 run_example(prompt)
 ```
 
+### Output confidence score with Object Detection
+```python
+
+def run_example_with_score(task_prompt, text_input=None):
+    if text_input is None:
+        prompt = task_prompt
+    else:
+        prompt = task_prompt + text_input
+    inputs = processor(text=prompt, images=image, return_tensors="pt").to(device, torch_dtype)
+    generated_ids = model.generate(
+      input_ids=inputs["input_ids"],
+      pixel_values=inputs["pixel_values"],
+      max_new_tokens=1024,
+      num_beams=3,
+      return_dict_in_generate=True,
+      output_scores=True,
+    )
+    generated_text = processor.batch_decode(generated_ids.sequences, skip_special_tokens=False)[0]
+
+    prediction, scores, beam_indices = generated_ids.sequences, generated_ids.scores, generated_ids.beam_indices
+    transition_beam_scores = model.compute_transition_scores(
+        sequences=prediction,
+        scores=scores,
+        beam_indices=beam_indices,
+    )
+
+    parsed_answer = processor.post_process_generation(sequence=generated_ids.sequences[0], 
+        transition_beam_score=transition_beam_scores[0],
+        task=task_prompt, image_size=(image.width, image.height)
+    )
+
+    print(parsed_answer)
+
+prompt = "<OD>"
+run_example_with_score(prompt)
+
+```
+
 for More detailed examples, please refer to [notebook](https://huggingface.co/microsoft/Florence-2-large/blob/main/sample_inference.ipynb)
 </details>
 
