@@ -26,7 +26,7 @@ import torch.utils.checkpoint as checkpoint
 from torch.nn import CrossEntropyLoss 
 from collections import OrderedDict
 from einops import rearrange
-from timm.models.layers import DropPath, trunc_normal_
+from timm.layers import DropPath, trunc_normal_
 
 from transformers.modeling_utils import PreTrainedModel
 from transformers.generation.utils import GenerationMixin
