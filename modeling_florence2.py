@@ -1432,6 +1432,17 @@ class Florence2LanguagePreTrainedModel(PreTrainedModel):
             module.weight.data.normal_(mean=0.0, std=std)
             if module.padding_idx is not None:
                 module.weight.data[module.padding_idx].zero_()
+        elif isinstance(module, nn.Conv2d):
+            nn.init.normal_(module.weight, std=0.02)
+            for name, _ in module.named_parameters():
+                if name == "bias":
+                    nn.init.constant_(module.bias, 0)
+        elif isinstance(module, nn.LayerNorm):
+            nn.init.constant_(module.weight, 1.0)
+            nn.init.constant_(module.bias, 0)
+        elif isinstance(module, nn.BatchNorm2d):
+            nn.init.constant_(module.weight, 1.0)
+            nn.init.constant_(module.bias, 0)
 
     @property
     def dummy_inputs(self):
