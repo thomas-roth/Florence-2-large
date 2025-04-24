@@ -2066,6 +2066,12 @@ class Florence2LanguageForConditionalGeneration(Florence2LanguagePreTrainedModel
         # Initialize weights and apply final processing
         self.post_init()
 
+    def _tie_weights(self):
+        if self.config.tie_word_embeddings:
+            self._tie_or_clone_weights(self.model.encoder.embed_tokens, self.model.shared)
+            self._tie_or_clone_weights(self.model.decoder.embed_tokens, self.model.shared)
+            self._tie_or_clone_weights(self.lm_head, self.model.shared)
+
     def get_encoder(self):
         return self.model.get_encoder()
 
@@ -2523,6 +2529,8 @@ class Florence2VisionModelWithProjection(Florence2PreTrainedModel):
     FLORENCE2_START_DOCSTRING,
 )
 class Florence2ForConditionalGeneration(Florence2PreTrainedModel):
+    _tied_weights_keys = ["language_model.encoder.embed_tokens.weight", "language_model.decoder.embed_tokens.weight", "language_model.lm_head.weight"]
+
     def __init__(self, config: Florence2Config):
         super().__init__(config)
         assert config.vision_config.model_type == 'davit', 'only DaViT is supported for now'
@@ -2537,8 +2545,6 @@ class Florence2ForConditionalGeneration(Florence2PreTrainedModel):
 
         language_model = Florence2LanguageForConditionalGeneration(config=config.text_config)
 
-        if language_model._tied_weights_keys is not None:
-            self._tied_weights_keys = [f"language_model.{k}" for k in language_model._tied_weights_keys]
         self.language_model = language_model
 
         self.pad_token_id = self.config.pad_token_id if self.config.pad_token_id is not None else -1
