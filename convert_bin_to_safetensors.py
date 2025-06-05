@@ -1,3 +1,4 @@
+from pathlib import Path
 import torch
 from safetensors.torch import save_file
 
@@ -29,6 +30,6 @@ def convert_bin_to_safetensors(bin_path, safetensors_path):
     print(f"Converted {bin_path} to {safetensors_path}")
 
 if __name__ == "__main__":
-    bin_path = "/home/troth/code/hiwi/flower_vla_calvin/pretrained/Florence-2-large/pytorch_model.bin"
-    safetensors_path = "/home/troth/code/hiwi/flower_vla_calvin/pretrained/Florence-2-large/model.safetensors"
+    bin_path = str(Path(__file__).absolute().parent) + "/pretrained/pytorch_model.bin"
+    safetensors_path = str(Path(__file__).absolute().parent) + "/pretrained/model.safetensors"
     convert_bin_to_safetensors(bin_path, safetensors_path)
