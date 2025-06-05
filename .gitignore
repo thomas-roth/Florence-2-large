@@ -1,1 +1,2 @@
-pretrained/
+model.safetensors
+pytorch_model.bin
