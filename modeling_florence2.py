@@ -218,18 +218,26 @@ class PreNorm(nn.Module):
         self.drop_path = drop_path
 
     def forward(self, x, *args, **kwargs):
+        attn = None
         shortcut = x
         if self.norm != None:
-            x, size = self.fn(self.norm(x), *args, **kwargs)
+            fn_result = self.fn(self.norm(x), *args, **kwargs)
         else:
-            x, size = self.fn(x, *args, **kwargs)
+            fn_result = self.fn(x, *args, **kwargs)
+        
+        if len(fn_result) == 3:
+                x, size, attn = fn_result
+        else:
+            x, size = fn_result
 
         if self.drop_path:
             x = self.drop_path(x)
 
         x = shortcut + x
 
-        return x, size
+        if attn is None:
+            return x, size
+        return x, size, attn
 
 
 class Mlp(nn.Module):
@@ -348,12 +356,12 @@ class ChannelAttention(nn.Module):
         q, k, v = qkv[0], qkv[1], qkv[2]
 
         q = q * (float(N) ** -0.5)
-        attention = q.transpose(-1, -2) @ k
-        attention = attention.softmax(dim=-1)
-        x = (attention @ v.transpose(-1, -2)).transpose(-1, -2)
+        attn = q.transpose(-1, -2) @ k
+        attn = attn.softmax(dim=-1)
+        x = (attn @ v.transpose(-1, -2)).transpose(-1, -2)
         x = x.transpose(1, 2).reshape(B, N, C)
         x = self.proj(x)
-        return x, size
+        return x, size, attn
 
 
 class ChannelBlock(nn.Module):
@@ -378,16 +386,16 @@ class ChannelBlock(nn.Module):
             drop_path
         )
 
-    def forward(self, x, size):
+    def forward(self, x, size, attn=None):
         if self.conv1:
             x, size = self.conv1(x, size)
-        x, size = self.channel_attn(x, size)
+        x, size, attn = self.channel_attn(x, size)
 
         if self.conv2:
             x, size = self.conv2(x, size)
         x, size = self.ffn(x, size)
 
-        return x, size
+        return x, size, attn
 
 
 def window_partition(x, window_size: int):
@@ -463,7 +471,7 @@ class WindowAttention(nn.Module):
 
         x = x.view(B, H * W, C)
 
-        return x, size
+        return x, size, attn
 
 
 class SpatialBlock(nn.Module):
@@ -488,15 +496,15 @@ class SpatialBlock(nn.Module):
             drop_path
         )
 
-    def forward(self, x, size):
+    def forward(self, x, size, attn=None):
         if self.conv1:
             x, size = self.conv1(x, size)
-        x, size = self.window_attn(x, size)
+        x, size, attn = self.window_attn(x, size)
 
         if self.conv2:
             x, size = self.conv2(x, size)
         x, size = self.ffn(x, size)
-        return x, size
+        return x, size, attn
 
 
 class DaViT(nn.Module):
@@ -639,17 +647,20 @@ class DaViT(nn.Module):
         Args:
             x (_type_): input image tensor
         """
+        input_pixel_values = x
         input_size = (x.size(2), x.size(3))
+        attns_blocks = []
         for conv, block in zip(self.convs, self.blocks):
             x, input_size = conv(x, input_size)
             if self.enable_checkpoint:
-                x, input_size = checkpoint.checkpoint(block, x, input_size)
+                x, input_size, attn = checkpoint.checkpoint(block, x, input_size, attn=None)
             else:
-                x, input_size = block(x, input_size)
-        return x
+                x, input_size, attn = block(x, input_size)
+            attns_blocks.append({"img": input_pixel_values, "attn": attn})
+        return x, attns_blocks
 
     def forward_features(self, x):
-        x = self.forward_features_unpool(x)
+        x, attns_blocks = self.forward_features_unpool(x)
 
         # (batch_size, num_tokens, token_dim)
         x = self.avgpool(x.transpose(1, 2))
@@ -657,12 +668,12 @@ class DaViT(nn.Module):
         x = torch.flatten(x, 1)
         x = self.norms(x)
 
-        return x
+        return x, attns_blocks
 
     def forward(self, x):
-        x = self.forward_features(x)
+        x, attns_blocks = self.forward_features(x)
         x = self.head(x)
-        return x
+        return x, attns_blocks
     
     @classmethod
     def from_config(cls, config):
@@ -2429,10 +2440,10 @@ class Florence2VisionModel(Florence2PreTrainedModel):
     
     def forward(self, pixel_values):
         if len(pixel_values.shape) == 4:
-            x = self.vision_tower.forward_features_unpool(pixel_values)
+            x, attns_blocks = self.vision_tower.forward_features_unpool(pixel_values)
         else:
             raise ValueError(f'invalid image shape {pixel_values.shape}')
-        return x
+        return x, attns_blocks
 
 
 @add_start_docstrings(
@@ -2481,7 +2492,7 @@ class Florence2VisionModelWithProjection(Florence2PreTrainedModel):
         if len(pixel_values.shape) == 4:
             batch_size, C, H, W = pixel_values.shape
             T = 1
-            x = self.vision_tower.forward_features_unpool(pixel_values)
+            x, attns_blocks = self.vision_tower.forward_features_unpool(pixel_values)
         else:
             raise ValueError(f'invalid image shape {pixel_values.shape}')
         
@@ -2522,7 +2533,7 @@ class Florence2VisionModelWithProjection(Florence2PreTrainedModel):
         x = self.image_proj_norm(x)
 
 
-        return x
+        return x, attns_blocks
 
 
 
@@ -2601,7 +2612,7 @@ class Florence2ForConditionalGeneration(Florence2PreTrainedModel):
         if len(pixel_values.shape) == 4:
             batch_size, C, H, W = pixel_values.shape
             T = 1
-            x = self.vision_tower.forward_features_unpool(pixel_values)
+            x, attns_blocks = self.vision_tower.forward_features_unpool(pixel_values)
         else:
             raise ValueError(f'invalid image shape {pixel_values.shape}')
         
@@ -2641,7 +2652,7 @@ class Florence2ForConditionalGeneration(Florence2PreTrainedModel):
         x = x @ self.image_projection
         x = self.image_proj_norm(x)
 
-        return x 
+        return x, attns_blocks
 
     def _merge_input_ids_with_image_features(
         self, image_features, inputs_embeds 
@@ -2734,7 +2745,7 @@ class Florence2ForConditionalGeneration(Florence2PreTrainedModel):
             # 2. Merge text and images
             if pixel_values is not None:
                 # (batch_size, num_image_tokens, hidden_size)
-                image_features = self._encode_image(pixel_values)
+                image_features, _ = self._encode_image(pixel_values)
                 inputs_embeds, attention_mask = self._merge_input_ids_with_image_features(image_features, inputs_embeds)
 
         if inputs_embeds is not None:
@@ -2791,7 +2802,7 @@ class Florence2ForConditionalGeneration(Florence2PreTrainedModel):
                 inputs_embeds = self.get_input_embeddings()(input_ids)
             # 2. Merge text and images
             if pixel_values is not None:
-                image_features = self._encode_image(pixel_values)
+                image_features, _ = self._encode_image(pixel_values)
                 inputs_embeds, attention_mask = self._merge_input_ids_with_image_features(image_features, inputs_embeds)
         
         return self.language_model.generate(

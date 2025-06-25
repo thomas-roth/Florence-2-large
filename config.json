@@ -52,7 +52,8 @@
       "num_hidden_layers": 12,
       "pad_token_id": 1,
       "scale_embedding": false,
-      "num_beams": 3
+      "num_beams": 3,
+      "output_attentions": true
   },
   "vision_config": {
     "model_type": "davit",
