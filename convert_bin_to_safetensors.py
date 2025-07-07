@@ -30,6 +30,6 @@ def convert_bin_to_safetensors(bin_path, safetensors_path):
     print(f"Converted {bin_path} to {safetensors_path}")
 
 if __name__ == "__main__":
-    bin_path = str(Path(__file__).absolute().parent) + "/pretrained/pytorch_model.bin"
-    safetensors_path = str(Path(__file__).absolute().parent) + "/pretrained/model.safetensors"
+    bin_path = str(Path(__file__).absolute().parent) + "/pytorch_model.bin"
+    safetensors_path = str(Path(__file__).absolute().parent) + "/model.safetensors"
     convert_bin_to_safetensors(bin_path, safetensors_path)
