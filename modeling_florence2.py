@@ -2552,6 +2552,10 @@ class Florence2ForConditionalGeneration(Florence2PreTrainedModel):
         self.pad_token_id = self.config.pad_token_id if self.config.pad_token_id is not None else -1
         self.post_init()
     
+    def _supports_sdpa(self):
+        # already exists in parent class but not found for some reason
+        return self.language_model._supports_sdpa
+    
     def _build_image_projection_layers(self, config):
         image_dim_out = config.vision_config.dim_embed[-1]
         dim_projection = config.vision_config.projection_dim
